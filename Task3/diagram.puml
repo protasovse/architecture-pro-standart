@@ -1,0 +1,50 @@
+@startuml
+title C4-Context: Открытие депозитов (MVP)
+
+actor "Клиент" as Client
+actor "Сотрудник отделения" as BranchStaff
+actor "Оператор кол-центра" as CallCenterOp
+actor "Бэк-офис депозитов" as BackOfficeDep
+
+rectangle "Публичный сайт\n(PHP + React)" as Site
+rectangle "Интернет-банк (IB)\nASP.NET + MS SQL" as IB
+rectangle "Система кол-центра\nReact + Spring Boot + PostgreSQL" as CCS
+rectangle "АБС\nDelphi + Oracle" as ABS
+rectangle "Модуль депозитных ставок\nв АБС" as ABSDepRates
+rectangle "Сервис заявок на депозиты\nDepAppSvc" as DepAppSvc
+rectangle "Сервис ставок по депозитам\nDepRateSvc" as DepRateSvc
+rectangle "Сервис нотификаций\nNotifySvc" as NotifySvc
+rectangle "СМС-ядро / SMS-шлюз" as SMSCore
+
+' Клиент и каналы
+Client --> Site : просмотр депозитов,\nзаявка (ФИО, телефон)
+Client --> IB : работа в интернет-банке
+
+' Сайт → сервисы
+Site --> DepRateSvc : запрос списка депозитов\nи ставок (HTTP)
+Site --> DepAppSvc : создать заявку на депозит\n(новый клиент)
+
+' IB → сервисы
+IB --> DepRateSvc : запрос ставок\nдля клиента (HTTP)
+IB --> DepAppSvc : создать заявку на депозит\n(существующий клиент)
+IB --> NotifySvc : запрос OTP по СМС\nдля подтверждения операции
+
+' Кол-центр
+CallCenterOp --> CCS : работа с обращениями клиентов
+CCS --> DepAppSvc : чтение/обновление\nзаявок с сайта
+
+' Бэк-офис и АБС
+BackOfficeDep --> ABS : обработка заявок,\nоткрытие депозитов
+BackOfficeDep --> ABSDepRates : заведение/изменение ставок
+
+' Связи АБС ↔ сервисы
+DepRateSvc --> ABSDepRates : периодическая синхронизация ставок
+DepAppSvc --> ABS : передача заявок на депозиты\n(асинхронно/пакетно)
+ABS --> DepAppSvc : статусы открытия депозитов
+
+' Нотификации
+DepAppSvc --> NotifySvc : события (ставка подтверждена,\nдепозит открыт)
+NotifySvc --> SMSCore : отправить СМС
+SMSCore --> Client : СМС-уведомления
+
+@enduml
