@@ -1,0 +1,32 @@
+@startuml
+title C4-Context: Доступ кол-центров к депозитным ставкам
+
+actor "Сотрудник внутреннего\nкол-центра" as InternalCCOp
+actor "Сотрудник партнёрского\nкол-центра" as PartnerCCOp
+actor "Сотрудник бэк-офиса\nдепозитов/кредитов" as BackOffice
+
+rectangle "Система кол-центра\n(CCS)" as CCS
+rectangle "Система партнёрского\nкол-центра (PCCS)" as PCCS
+rectangle "Сервис ставок по депозитам\n(DepositRateService)" as DepositRateService
+rectangle "Модуль депозитных ставок\nв АБС (ABSDepositRates)" as ABSDepositRates
+rectangle "АБС (ядро банка)" as ABS
+rectangle "Зона обмена файлами с партнёром\n(E-mail)" as FileHub
+
+' Бэк-офис и АБС
+BackOffice --> ABSDepositRates : ввод/изменение ставок
+ABSDepositRates --> ABS : хранение ставок\nв БД АБС
+
+' Синхронизация ставок
+DepositRateService --> ABSDepositRates : периодическая\nсинхронизация ставок
+DepositRateService -[hidden]> ABS : (использует\nинтеграционный слой)
+
+' Внутренний кол-центр
+InternalCCOp --> CCS : работа по скриптам,\nконсультация клиентов
+CCS --> DepositRateService : запрос актуальных ставок\nпо депозитам (HTTP/REST)
+
+' Партнёрский кол-центр
+DepositRateService --> FileHub : регулярная выгрузка файла\nсо ставками (CSV/XLSX)
+PCCS --> FileHub : забор файла ставок
+PartnerCCOp --> PCCS : консультация клиентов\nпо загруженным ставкам
+
+@enduml
