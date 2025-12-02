@@ -1,0 +1,49 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+Person(client, "Клиент", "Подаёт заявку на кредит, получает решения и статусы")
+
+System(ib, "Интернет-банк (IB)", "ASP.NET MVC, MS SQL")
+System(website, "Сайт банка", "PHP + React.js")
+System_Ext(scoring, "Скоринговая система", "Python + Flask + PostgreSQL")
+System_Ext(bki, "Бюро кредитных историй (БКИ)", "Внешний API")
+System_Ext(conveyor, "Кредитный конвейер (Camunda BPM)", "Oracle + Java")
+System_Ext(abs, "АБС", "Delphi + Oracle")
+System_Ext(sms, "SMS-шлюз", "Отправка уведомлений клиентам")
+
+System_Boundary(cap_boundary, "Credit Application Platform (CAP)") {
+    System(cap, "CreditAppService", "Приём заявок, скоринг, статусы, SMS")
+}
+
+
+' Клиент
+Rel(client, ib, "Подаёт заявку, подтверждает, смотрит статус")
+Rel(client, website, "Подаёт заявку")
+
+' IB → CAP
+Rel(ib, cap, "Отправляет заявку / запрашивает статусы")
+
+' Website → CAP
+Rel(website, cap, "Отправляет заявку от новых клиентов")
+
+' CAP → Scoring
+Rel(cap, scoring, "Отправляет данные на скоринг")
+Rel(scoring, cap, "Результат скоринга")
+
+' Scoring → BKI
+Rel(scoring, bki, "Запрос кредитной истории")
+Rel(bki, scoring, "Результат")
+
+' CAP → Conveyor
+Rel(cap, conveyor, "Передаёт заявку на обработку")
+
+' Conveyor → CAP
+Rel(conveyor, cap, "Возвращает статусы")
+
+' Conveyor ↔ ABS
+Rel(conveyor, abs, "Обмен данными (раз в сутки)")
+
+' CAP → SMS
+Rel(cap, sms, "Отправка уведомлений")
+
+@enduml
